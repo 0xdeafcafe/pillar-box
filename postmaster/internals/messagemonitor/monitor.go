@@ -2,6 +2,8 @@ package messagemonitor
 
 import (
 	"database/sql"
+	"os"
+	"path"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -28,7 +30,13 @@ type ScannedRow struct {
 }
 
 func New(log *zap.Logger) (*MessageMonitor, error) {
-	db, err := sql.Open("sqlite3", "/Users/afr/Library/Messages/chat.db")
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	dbPath := path.Join(dirname, "Library/Messages/chat.db")
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
 	}
