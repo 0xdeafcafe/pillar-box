@@ -1,25 +1,25 @@
 package messagemonitor
 
 import (
-	"context"
 	"database/sql"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 
-	"github.com/0xdeafcafe/pillar-box/server/internals/broadcaster"
 	"github.com/0xdeafcafe/pillar-box/server/internals/codeextractor"
 	"github.com/0xdeafcafe/pillar-box/server/internals/streamtyped"
 )
 
 type MessageMonitor struct {
-	db          *sql.DB
-	log         *zap.Logger
-	broadcaster *broadcaster.Broadcaster
+	db                     *sql.DB
+	log                    *zap.Logger
+	handleMessageDetection HandleMessageDetectionFunc
 
 	latestKnownRecordTimestamp int
 }
+
+type HandleMessageDetectionFunc func(mfaCode string)
 
 type ScannedRow struct {
 	GUID           string
@@ -27,7 +27,7 @@ type ScannedRow struct {
 	Date           int
 }
 
-func New(ctx context.Context, log *zap.Logger, broadcaster *broadcaster.Broadcaster) (*MessageMonitor, error) {
+func New(log *zap.Logger) (*MessageMonitor, error) {
 	db, err := sql.Open("sqlite3", "/Users/afr/Library/Messages/chat.db")
 	if err != nil {
 		return nil, err
@@ -36,12 +36,15 @@ func New(ctx context.Context, log *zap.Logger, broadcaster *broadcaster.Broadcas
 	return &MessageMonitor{
 		db:                         db,
 		log:                        log,
-		broadcaster:                broadcaster,
 		latestKnownRecordTimestamp: 0,
 	}, nil
 }
 
-func (m *MessageMonitor) ListenAndHandle(ctx context.Context) {
+func (m *MessageMonitor) SetDetectionHandler(handleMessageDetection HandleMessageDetectionFunc) {
+	m.handleMessageDetection = handleMessageDetection
+}
+
+func (m *MessageMonitor) ListenAndHandle() {
 	// TODO(afr): Use FS monitoring to detect new messages instead of polling?
 
 	for {
@@ -96,8 +99,11 @@ func (m *MessageMonitor) ListenAndHandle(ctx context.Context) {
 				continue
 			}
 
-			m.broadcaster.BroadcastMFACode(*mfaCode)
 			m.latestKnownRecordTimestamp = row.Date
+
+			if m.handleMessageDetection != nil {
+				m.handleMessageDetection(*mfaCode)
+			}
 		}
 
 		time.Sleep(2 * time.Second)

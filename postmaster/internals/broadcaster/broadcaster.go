@@ -1,7 +1,6 @@
 package broadcaster
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,7 +38,7 @@ type WebsocketMessagePayloadMFACode struct {
 	Code string `json:"code"`
 }
 
-func New(ctx context.Context, log *zap.Logger) *Broadcaster {
+func New(log *zap.Logger) *Broadcaster {
 	return &Broadcaster{
 		log:             log,
 		mutex:           sync.Mutex{},
