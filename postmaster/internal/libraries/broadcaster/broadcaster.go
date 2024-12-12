@@ -38,6 +38,8 @@ type WebsocketMessagePayloadMFACode struct {
 	Code string `json:"code"`
 }
 
+// New creates a new Broadcaster instance. The Broadcaster is responsible for managing
+// websocket connections and broadcasting messages to connected clients.
 func New(log *zap.Logger) *Broadcaster {
 	return &Broadcaster{
 		log:             log,

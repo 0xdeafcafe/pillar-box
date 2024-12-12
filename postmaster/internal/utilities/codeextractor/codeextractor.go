@@ -61,15 +61,15 @@ var (
 
 // ExtractMFACodeFromMessage extracts an MFA code from a message. If no code is found then
 // nil is returned.
-func ExtractMFACodeFromMessage(message string) (*string, error) {
+func ExtractMFACodeFromMessage(message string) (string, error) {
 	for _, regex := range regexControlOrder {
 		matches := regex.FindStringSubmatch(message)
 		if len(matches) < 2 {
 			continue
 		}
 
-		return &matches[2], nil
+		return matches[2], nil
 	}
 
-	return nil, nil
+	return "", nil
 }

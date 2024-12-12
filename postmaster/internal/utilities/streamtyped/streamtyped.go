@@ -5,7 +5,7 @@ import (
 	"errors"
 	"unicode/utf8"
 
-	"github.com/0xdeafcafe/pillar-box/server/internal/ptr"
+	"github.com/0xdeafcafe/pillar-box/server/internal/utilities/ptr"
 )
 
 var (
@@ -64,5 +64,5 @@ func ExtractMessageFromStreamTypedBuffer(buffer []byte) (*string, error) {
 		return nil, errors.Join(ErrInvalidStreamTypedBuffer, ErrStreamTypedMessageInvalid)
 	}
 
-	return ptr.String(string(removeMessagePrefix[:messageEnd])), nil
+	return ptr.Ptr(string(removeMessagePrefix[:messageEnd])), nil
 }

@@ -26,6 +26,10 @@ type MacOSLatestCode struct {
 	MFACode    string
 }
 
+// New creates a new MacOS instance. The MacOS instance is responsible for managing the
+// macOS menu bar application and rendering the menu items. The MacOS instance is also
+// responsible for handling MFA codes detected by the MessageMonitor, displaying them
+// in the menu, and copying them to the clipboard.
 func New() *MacOS {
 	return &MacOS{
 		Preferences: &MacOSPreferences{},
@@ -44,7 +48,6 @@ func (m *MacOS) HandleMFACode(mfaCode string) {
 func (m *MacOS) Run() {
 	m.renderMenu()
 
-	// load preferences
 	m.Preferences.CopyCodeToClipboard = menuet.Defaults().Boolean(prefCopyCodes)
 
 	menuet.App().RunApplication()

@@ -3,9 +3,9 @@ package app
 import (
 	"errors"
 
-	"github.com/0xdeafcafe/pillar-box/server/internal/broadcaster"
-	"github.com/0xdeafcafe/pillar-box/server/internal/macos"
-	"github.com/0xdeafcafe/pillar-box/server/internal/messagemonitor"
+	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/broadcaster"
+	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/macos"
+	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/messagemonitor"
 	"go.uber.org/zap"
 )
 
@@ -33,12 +33,12 @@ func New(log *zap.Logger) *App {
 
 func (a *App) Run() {
 	// setup detection handlers
-	a.Monitor.SetDetectionHandler(func(mfaCode string) {
-		a.Broadcaster.BroadcastMFACode(mfaCode)
-		a.MacOS.HandleMFACode(mfaCode)
-	})
+	a.Monitor.RegisterDetectionHandler(a.Broadcaster.BroadcastMFACode)
+	a.Monitor.RegisterDetectionHandler(a.MacOS.HandleMFACode)
 
+	// Run server and monitor in go routines
 	go a.Broadcaster.ListenAndBroadcast()
 	go a.Monitor.ListenAndHandle()
+
 	a.MacOS.Run()
 }

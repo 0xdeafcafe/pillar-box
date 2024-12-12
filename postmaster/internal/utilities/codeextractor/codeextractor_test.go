@@ -100,6 +100,6 @@ func TestExtractMFACodeFromMessage_TestCases(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.NotNil(t, code)
-		assert.Equal(t, testCase.Code, *code)
+		assert.Equal(t, testCase.Code, code)
 	}
 }

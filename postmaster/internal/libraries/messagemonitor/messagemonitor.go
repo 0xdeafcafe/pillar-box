@@ -9,19 +9,20 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 
-	"github.com/0xdeafcafe/pillar-box/server/internal/codeextractor"
-	"github.com/0xdeafcafe/pillar-box/server/internal/streamtyped"
+	"github.com/0xdeafcafe/pillar-box/server/internal/utilities/codeextractor"
+	"github.com/0xdeafcafe/pillar-box/server/internal/utilities/streamtyped"
 )
 
 type MessageMonitor struct {
-	db                     *sql.DB
-	log                    *zap.Logger
-	handleMessageDetection HandleMessageDetectionFunc
+	db  *sql.DB
+	log *zap.Logger
+
+	registeredDetectionHandlers []DetectionHandlerFunc
 
 	latestKnownRecordTimestamp int
 }
 
-type HandleMessageDetectionFunc func(mfaCode string)
+type DetectionHandlerFunc func(mfaCode string)
 
 type ScannedRow struct {
 	GUID           string
@@ -29,6 +30,10 @@ type ScannedRow struct {
 	Date           int
 }
 
+// New creates a new MessageMonitor instance. The MessageMonitor is responsible for
+// monitoring the iMessage database for new messages and extracting MFA codes from them.
+// When a new MFA code is detected, the MessageMonitor will call the provided
+// HandleMessageDetectionFunc with the detected MFA code.
 func New(log *zap.Logger) (*MessageMonitor, error) {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
@@ -42,19 +47,18 @@ func New(log *zap.Logger) (*MessageMonitor, error) {
 	}
 
 	return &MessageMonitor{
-		db:                         db,
-		log:                        log,
-		latestKnownRecordTimestamp: 0,
+		db:                          db,
+		log:                         log,
+		latestKnownRecordTimestamp:  0,
+		registeredDetectionHandlers: make([]DetectionHandlerFunc, 0),
 	}, nil
 }
 
-func (m *MessageMonitor) SetDetectionHandler(handleMessageDetection HandleMessageDetectionFunc) {
-	m.handleMessageDetection = handleMessageDetection
+func (m *MessageMonitor) RegisterDetectionHandler(handleMessageDetection DetectionHandlerFunc) {
+	m.registeredDetectionHandlers = append(m.registeredDetectionHandlers, handleMessageDetection)
 }
 
 func (m *MessageMonitor) ListenAndHandle() {
-	// TODO(afr): Use FS monitoring to detect new messages instead of polling?
-
 	for {
 		var rows *sql.Rows
 		var err error
@@ -99,21 +103,23 @@ func (m *MessageMonitor) ListenAndHandle() {
 			if err != nil {
 				m.latestKnownRecordTimestamp = row.Date
 				m.log.Warn("failed to extract mfa code from message", zap.Error(err), zap.String("message", *message))
+
 				continue
 			}
-			if mfaCode == nil {
+			if mfaCode == "" {
 				m.latestKnownRecordTimestamp = row.Date
 				m.log.Info("no mfa code found in message", zap.String("message", *message))
+
 				continue
 			}
 
 			m.latestKnownRecordTimestamp = row.Date
 
-			if m.handleMessageDetection != nil {
-				m.handleMessageDetection(*mfaCode)
+			for _, handler := range m.registeredDetectionHandlers {
+				handler(mfaCode)
 			}
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
