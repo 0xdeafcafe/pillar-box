@@ -3,9 +3,9 @@ package app
 import (
 	"errors"
 
-	"github.com/0xdeafcafe/pillar-box/server/internals/broadcaster"
-	"github.com/0xdeafcafe/pillar-box/server/internals/macos"
-	"github.com/0xdeafcafe/pillar-box/server/internals/messagemonitor"
+	"github.com/0xdeafcafe/pillar-box/server/internal/broadcaster"
+	"github.com/0xdeafcafe/pillar-box/server/internal/macos"
+	"github.com/0xdeafcafe/pillar-box/server/internal/messagemonitor"
 	"go.uber.org/zap"
 )
 

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"unicode/utf8"
 
-	"github.com/0xdeafcafe/pillar-box/server/internals/ptr"
+	"github.com/0xdeafcafe/pillar-box/server/internal/ptr"
 )
 
 var (

@@ -9,8 +9,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
 
-	"github.com/0xdeafcafe/pillar-box/server/internals/codeextractor"
-	"github.com/0xdeafcafe/pillar-box/server/internals/streamtyped"
+	"github.com/0xdeafcafe/pillar-box/server/internal/codeextractor"
+	"github.com/0xdeafcafe/pillar-box/server/internal/streamtyped"
 )
 
 type MessageMonitor struct {
