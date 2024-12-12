@@ -11,22 +11,24 @@ listen for SMS codes and automatically fill them in.
 - No need to copy and paste codes from messages, or switch between apps
 - Secure, nothing leaves your machine
 
-## Pre-cooked
+## How to use
 
 The easiest way to get started is to download the latest release from the [releases page](releases). Download both files:
 
-- `Pillar Box.zip` - The macOS application
+- `PillarBox.zip` - The macOS application
 - `pillar-box-chromium-extension.zip` - The Chromium extension
 
-Extract the app from the archive and run it, you may need to go to System Preferences > Privacy & Security > Full Disk Access and allow the app for it to run.
+Extract the app from the archive and run it, you may need to go to System Settings > Privacy & Security > Full Disk Access and allow the app for it to run.
 
 Extract the extension from the archive and navigate to `chrome://extensions/` in your browser. Enable "Developer mode" in the top right corner, click "Load unpacked" and select the extension you just extracted.
 
 That should be it, go to a website that requires an SMS code and you should see the code automatically filled in.
 
-## Running from source
+## Building from source
 
 ### macOS application
+
+After running you may need to go to System Settings > Privacy & Security > Full Disk Access and allow the app for it to run.
 
 ```bash
 $ cd postmaster
@@ -38,4 +40,3 @@ $ go run cmd/main.go
 1. Open `chrome://extensions/` in your browser (tested with Chrome and Arc)
 2. Enable "Developer mode" in the top right corner
 3. Click "Load unpacked" and select the `extension` directory
-
