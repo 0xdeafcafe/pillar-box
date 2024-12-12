@@ -6,6 +6,8 @@ import (
 
 	"github.com/caseymrm/menuet"
 	"golang.design/x/clipboard"
+
+	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/messagemonitor"
 )
 
 const (
@@ -13,6 +15,9 @@ const (
 )
 
 type MacOS struct {
+	debug   bool
+	monitor *messagemonitor.MessageMonitor
+
 	LatestCode  *MacOSLatestCode
 	Preferences *MacOSPreferences
 }
@@ -30,8 +35,11 @@ type MacOSLatestCode struct {
 // macOS menu bar application and rendering the menu items. The MacOS instance is also
 // responsible for handling MFA codes detected by the MessageMonitor, displaying them
 // in the menu, and copying them to the clipboard.
-func New() *MacOS {
+func New(monitor *messagemonitor.MessageMonitor, debug bool) *MacOS {
 	return &MacOS{
+		debug:   debug,
+		monitor: monitor,
+
 		Preferences: &MacOSPreferences{},
 	}
 }
@@ -55,24 +63,28 @@ func (m *MacOS) Run() {
 
 func (m *MacOS) renderMenu() {
 	menuet.App().Label = "com.0xdeafcafe.pillar-box-postmaster"
-	menuet.App().Children = m.generateMenuItems
+	menuet.App().Children = m.createMenuItems
 
 	menuet.App().SetMenuState(&menuet.MenuState{
 		Title: "PB",
 	})
 }
 
-func (m *MacOS) generateMenuItems() []menuet.MenuItem {
+func (m *MacOS) createMenuItems() []menuet.MenuItem {
 	items := []menuet.MenuItem{
-		m.generateLatestDiscoveredMenuItem(),
-		m.generateCopyLastCodeMenuItem(),
-		m.generateCopyCodesToClipboardMenuItem(),
+		m.createLatestDiscoveredMenuItem(),
+		m.createCopyLastCodeMenuItem(),
+		m.createCopyCodesToClipboardMenuItem(),
+	}
+
+	if m.debug {
+		items = append(items, m.createDebugFakeMessageInitiatorMenuItem())
 	}
 
 	return items
 }
 
-func (m *MacOS) generateLatestDiscoveredMenuItem() menuet.MenuItem {
+func (m *MacOS) createLatestDiscoveredMenuItem() menuet.MenuItem {
 	if m.LatestCode == nil {
 		return menuet.MenuItem{
 			Text: "Waiting for codes...",
@@ -84,7 +96,7 @@ func (m *MacOS) generateLatestDiscoveredMenuItem() menuet.MenuItem {
 	}
 }
 
-func (m *MacOS) generateCopyLastCodeMenuItem() menuet.MenuItem {
+func (m *MacOS) createCopyLastCodeMenuItem() menuet.MenuItem {
 	if m.LatestCode == nil {
 		return menuet.MenuItem{
 			Text: "No code to copy",
@@ -105,10 +117,22 @@ func (m *MacOS) generateCopyLastCodeMenuItem() menuet.MenuItem {
 	}
 }
 
-func (m *MacOS) generateCopyCodesToClipboardMenuItem() menuet.MenuItem {
+func (m *MacOS) createCopyCodesToClipboardMenuItem() menuet.MenuItem {
 	return menuet.MenuItem{
 		Text:  "Also copy codes to clipboard",
 		State: m.Preferences.CopyCodeToClipboard,
+		Clicked: func() {
+			newState := !m.Preferences.CopyCodeToClipboard
+
+			m.Preferences.CopyCodeToClipboard = newState
+			menuet.Defaults().SetBoolean(prefCopyCodes, newState)
+		},
+	}
+}
+
+func (m *MacOS) createDebugFakeMessageInitiatorMenuItem() menuet.MenuItem {
+	return menuet.MenuItem{
+		Text: "[debug] Dispatch random mock 2FA code (5 second fuse)",
 		Clicked: func() {
 			newState := !m.Preferences.CopyCodeToClipboard
 

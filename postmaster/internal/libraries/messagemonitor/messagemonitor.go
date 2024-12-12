@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
+	"golang.org/x/exp/rand"
 
 	"github.com/0xdeafcafe/pillar-box/server/internal/utilities/codeextractor"
 	"github.com/0xdeafcafe/pillar-box/server/internal/utilities/streamtyped"
@@ -56,6 +57,10 @@ func New(log *zap.Logger) (*MessageMonitor, error) {
 
 func (m *MessageMonitor) RegisterDetectionHandler(handleMessageDetection DetectionHandlerFunc) {
 	m.registeredDetectionHandlers = append(m.registeredDetectionHandlers, handleMessageDetection)
+}
+
+func (m *MessageMonitor) SendMockMessage() {
+	m.dispatchMFACode(generateMockMFACode())
 }
 
 func (m *MessageMonitor) ListenAndHandle() {
@@ -114,12 +119,26 @@ func (m *MessageMonitor) ListenAndHandle() {
 			}
 
 			m.latestKnownRecordTimestamp = row.Date
-
-			for _, handler := range m.registeredDetectionHandlers {
-				handler(mfaCode)
-			}
+			m.dispatchMFACode(mfaCode)
 		}
 
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func (m *MessageMonitor) dispatchMFACode(mfaCode string) {
+	for _, handler := range m.registeredDetectionHandlers {
+		handler(mfaCode)
+	}
+}
+
+func generateMockMFACode() string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	b := make([]byte, 6)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+
+	return string(b)
 }

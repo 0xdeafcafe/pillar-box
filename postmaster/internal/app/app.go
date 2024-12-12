@@ -15,14 +15,14 @@ type App struct {
 	MacOS       *macos.MacOS
 }
 
-func New(log *zap.Logger) *App {
+func New(log *zap.Logger, debug bool) *App {
 	monitor, err := messagemonitor.New(log)
 	if err != nil {
 		panic(errors.Join(errors.New("failed to create monitor"), err))
 	}
 
 	broadcaster := broadcaster.New(log)
-	macos := macos.New()
+	macos := macos.New(monitor, debug)
 
 	return &App{
 		Broadcaster: broadcaster,
