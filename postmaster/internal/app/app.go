@@ -16,13 +16,13 @@ type App struct {
 }
 
 func New(log *zap.Logger) *App {
-	broadcaster := broadcaster.New(log)
-	macos := macos.New()
-
 	monitor, err := messagemonitor.New(log)
 	if err != nil {
-		panic(errors.Join(errors.New("failed to create monitor"), errors.New(err.Error())))
+		panic(errors.Join(errors.New("failed to create monitor"), err))
 	}
+
+	broadcaster := broadcaster.New(log)
+	macos := macos.New()
 
 	return &App{
 		Broadcaster: broadcaster,
