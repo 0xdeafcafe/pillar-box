@@ -24,11 +24,10 @@ ship-ci:
 .PHONY build:
 build:
 	@echo "Building..."
-	@mkdir -p bin
-	@GOOS=darwin go build -o "bin/pillarbox" ./cmd/main.go
-	# @GOOS=darwin GOARCH=amd64 go build -o bin/pillarBox-amd64-darwin ./cmd/main.go
-	# @GOOS=darwin GOARCH=arm64 go build -o bin/pillarBox-arm64-darwin ./cmd/main.go
-	# @lipo bin/PillarBox-amd64 bin/PillarBox-arm64 -create -output "bin/pillarbox"
+	@mkdir -p Building
+	@CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o bin/pillarBox-amd64-darwin ./cmd/main.go
+	@CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o bin/pillarBox-arm64-darwin ./cmd/main.go
+	@lipo bin/PillarBox-amd64-darwin bin/PillarBox-arm64-darwin -create -output "bin/pillarbox"
 
 .PHONY bundle:
 bundle:
