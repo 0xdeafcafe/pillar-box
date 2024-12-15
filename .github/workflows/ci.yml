@@ -36,6 +36,7 @@ jobs:
 
       - name: Install Go dependencies
         run: go mod download
+        working-directory: postmaster
 
       - name: Install Node.js dependencies
         run: yarn install
@@ -89,6 +90,7 @@ jobs:
 
       - name: Install Go dependencies
         run: go mod download
+        working-directory: postmaster
 
       - name: Install Node.js dependencies
         run: yarn install
