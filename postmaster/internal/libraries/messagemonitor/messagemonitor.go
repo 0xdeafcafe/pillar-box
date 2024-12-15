@@ -18,11 +18,13 @@ type MessageMonitor struct {
 	db *sql.DB
 
 	registeredDetectionHandlers []DetectionHandlerFunc
+	registeredNoAccessHandler   NoAccessHandlerFunc
 
 	latestKnownRecordTimestamp int
 }
 
 type DetectionHandlerFunc func(mfaCode string)
+type NoAccessHandlerFunc func()
 
 type ScannedRow struct {
 	GUID           string
@@ -57,11 +59,25 @@ func (m *MessageMonitor) RegisterDetectionHandler(handleMessageDetection Detecti
 	m.registeredDetectionHandlers = append(m.registeredDetectionHandlers, handleMessageDetection)
 }
 
+func (m *MessageMonitor) RegisterNoAccessHandler(handleNoAccess NoAccessHandlerFunc) {
+	m.registeredNoAccessHandler = handleNoAccess
+}
+
 func (m *MessageMonitor) SendMockMessage() {
 	m.dispatchMFACode(generateMockMFACode())
 }
 
 func (m *MessageMonitor) ListenAndHandle() {
+	if err := m.ensureDatabaseAccess(); err != nil {
+		log.Printf("failed to access database: %v", err)
+
+		if m.registeredNoAccessHandler != nil {
+			m.registeredNoAccessHandler()
+		}
+
+		time.Sleep(5 * time.Second)
+	}
+
 	for {
 		var rows *sql.Rows
 		var err error
@@ -122,6 +138,14 @@ func (m *MessageMonitor) ListenAndHandle() {
 
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func (m *MessageMonitor) ensureDatabaseAccess() error {
+	if err := m.db.Ping(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *MessageMonitor) dispatchMFACode(mfaCode string) {

@@ -53,6 +53,25 @@ func (m *MacOS) HandleMFACode(mfaCode string) {
 	m.renderMenu()
 }
 
+func (m *MacOS) HandleNoAccess() {
+	response := menuet.App().Alert(menuet.Alert{
+		MessageText:     "Pillar Box needs Full Disk Access to read incoming codes",
+		InformativeText: "To enable Full Disk Access: System Settings > Security & Privacy > Full Disk Access > Add Pillar Box",
+		Buttons:         []string{"OK", "Cancel"},
+	})
+	log.Printf("response.Button: %d", response.Button)
+
+	if response.Button == 0 {
+		cmd := exec.Command("open", "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
+
+		log.Printf("opening system preferences: %v", cmd)
+
+		if err := cmd.Run(); err != nil {
+			log.Printf("failed to open system preferences: %v", err)
+		}
+	}
+}
+
 func (m *MacOS) Run() {
 	m.renderMenu()
 
