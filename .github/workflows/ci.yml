@@ -3,10 +3,10 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - '*'
   pull_request:
     branches:
-      - main
+      - '*'
 
 jobs:
   build:
@@ -54,6 +54,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Prerelease tag
+        id: check_tag_beta
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG" == *beta* ]]; then
+            echo "Tag contains 'beta'."
+            echo "::set-output name=contains_beta::true"
+          else
+            echo "Tag does not contain 'beta'."
+            echo "::set-output name=contains_beta::false"
+          fi
+        shell: bash
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -75,7 +88,13 @@ jobs:
         run: yarn install
         working-directory: extension
 
+      - name: Build macOS application (pre-release)
+        if: contains(github.ref, '-prerelease.') || contains(github.ref, '-beta.') || contains(github.ref, '-alpha.')
+        run: make ship-ci-beta
+        working-directory: postmaster
+
       - name: Build macOS application
+        if: (!contains(github.ref, '-prerelease.') && !contains(github.ref, '-beta.') && !contains(github.ref, '-alpha.'))
         run: make ship-ci
         working-directory: postmaster
 

@@ -12,6 +12,15 @@ ship:
 	@make codesign
 	@make notarize
 
+.PHONY ship-beta:
+ship-beta:
+	@make clean
+	@echo "Shipping..."
+	@make build
+	@make bundle-beta
+	@make codesign
+	@make notarize
+
 .PHONY ship-ci:
 ship-ci:
 	@echo "Shipping..."
@@ -21,13 +30,22 @@ ship-ci:
 	@make notarize-ci
 	@make compress
 
+.PHONY ship-ci-beta:
+ship-ci-beta:
+	@echo "Shipping..."
+	@make build
+	@make bundle-beta
+	@make codesign
+	@make notarize-ci
+	@make compress
+
 .PHONY build:
 build:
 	@echo "Building..."
 	@mkdir -p Building
-	@CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o bin/pillarBox-amd64-darwin ./cmd/main.go
-	@CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o bin/pillarBox-arm64-darwin ./cmd/main.go
-	@lipo bin/PillarBox-amd64-darwin bin/PillarBox-arm64-darwin -create -output "bin/pillarbox"
+	@CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o bin/pillarbox-amd64-darwin ./cmd/main.go
+	@CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o bin/pillarbox-arm64-darwin ./cmd/main.go
+	@lipo bin/pillarbox-amd64-darwin bin/pillarbox-arm64-darwin -create -output "bin/pillarbox"
 
 .PHONY bundle:
 bundle:
@@ -35,6 +53,14 @@ bundle:
 	@mkdir -p "bin/Pillar Box.app/Contents/Resources"
 	@mv "bin/pillarbox" "bin/Pillar Box.app/Contents/MacOS/"
 	@cp resources/icon.icns "bin/Pillar Box.app/Contents/Resources/"
+	@cp resources/Info.plist "bin/Pillar Box.app/Contents/"
+
+.PHONY bundle-beta:
+bundle-beta:
+	@mkdir -p "bin/Pillar Box.app/Contents/MacOS"
+	@mkdir -p "bin/Pillar Box.app/Contents/Resources"
+	@mv "bin/pillarbox" "bin/Pillar Box.app/Contents/MacOS/"
+	@cp resources/icon-beta.icns "bin/Pillar Box.app/Contents/Resources/icon.icns"
 	@cp resources/Info.plist "bin/Pillar Box.app/Contents/"
 
 .PHONY codesign:
