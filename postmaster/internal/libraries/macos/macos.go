@@ -15,7 +15,6 @@ import (
 type UndefinedBool int
 
 const (
-	prefShowNotification    = "com.0xdeafcafe.pillar-box-postmaster_show-notification"
 	prefCopyCodeToClipboard = "com.0xdeafcafe.pillar-box-postmaster_copy-code-to-clipboard"
 
 	UndefinedBoolUndefined UndefinedBool = iota
@@ -32,7 +31,6 @@ type MacOS struct {
 }
 
 type MacOSPreferences struct {
-	ShowNotification    bool
 	CopyCodeToClipboard bool
 }
 
@@ -67,16 +65,12 @@ func (m *MacOS) HandleMFACode(mfaCode string) {
 
 	if m.Preferences.CopyCodeToClipboard {
 		clipboard.Write(clipboard.FmtText, []byte(mfaCode))
-	}
 
-	if m.Preferences.ShowNotification {
 		menuet.App().Notification(menuet.Notification{
-			Title:                        "New SMS code detected",
+			Title:                        "New code detected",
 			Subtitle:                     fmt.Sprintf("Code: %s", mfaCode),
-			Message:                      "Click to copy to clipboard",
+			Message:                      "Copied to clipboard",
 			RemoveFromNotificationCenter: true,
-			ActionButton:                 "Copy",
-			CloseButton:                  "Dismiss",
 		})
 	}
 
@@ -106,7 +100,6 @@ func (m *MacOS) Run() {
 	m.renderMenu()
 
 	m.Preferences.CopyCodeToClipboard = readAndSanitiseBoolPref(prefCopyCodeToClipboard)
-	m.Preferences.ShowNotification = readAndSanitiseBoolPref(prefShowNotification)
 
 	menuet.App().RunApplication()
 }
@@ -134,7 +127,6 @@ func (m *MacOS) createMenuItems() []menuet.MenuItem {
 		m.createCopyLastCodeMenuItem(),
 		menuet.MenuItem{Type: menuet.Separator},
 		m.createCopyCodesToClipboardMenuItem(),
-		m.createShowNotificationMenuItem(),
 	)
 
 	return items
@@ -186,22 +178,9 @@ func (m *MacOS) createCopyCodesToClipboardMenuItem() menuet.MenuItem {
 	}
 }
 
-func (m *MacOS) createShowNotificationMenuItem() menuet.MenuItem {
-	return menuet.MenuItem{
-		Text:  "Show notification",
-		State: m.Preferences.ShowNotification,
-		Clicked: func() {
-			newState := !m.Preferences.ShowNotification
-
-			m.Preferences.ShowNotification = newState
-			menuet.Defaults().SetBoolean(prefShowNotification, newState)
-		},
-	}
-}
-
 func (m *MacOS) createDebugFakeMessageInitiatorMenuItem() menuet.MenuItem {
 	return menuet.MenuItem{
-		Text: "[debug] Dispatch random mock 2FA code (5 second fuse)",
+		Text: "[debug] Dispatch random mock MFA code (5 second fuse)",
 		Clicked: func() {
 			m.monitor.SendMockMessage()
 		},
