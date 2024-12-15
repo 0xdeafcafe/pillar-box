@@ -7,7 +7,7 @@
 		<key>CFBundleDisplayName</key>
 		<string>Pillar Box</string>
 		<key>CFBundleIdentifier</key>
-		<string>Alexander Forbes-Reed</string>
+		<string>com.0xdeafcafe.pillar-box-postmaster</string>
 		<key>CFBundleVersion</key>
 		<string>1.0</string>
 		<key>CFBundleShortVersionString</key>
