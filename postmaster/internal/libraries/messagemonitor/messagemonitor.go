@@ -2,12 +2,12 @@ package messagemonitor
 
 import (
 	"database/sql"
+	"log"
 	"os"
 	"path"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	"go.uber.org/zap"
 	"golang.org/x/exp/rand"
 
 	"github.com/0xdeafcafe/pillar-box/server/internal/utilities/codeextractor"
@@ -15,8 +15,7 @@ import (
 )
 
 type MessageMonitor struct {
-	db  *sql.DB
-	log *zap.Logger
+	db *sql.DB
 
 	registeredDetectionHandlers []DetectionHandlerFunc
 
@@ -35,7 +34,7 @@ type ScannedRow struct {
 // monitoring the iMessage database for new messages and extracting MFA codes from them.
 // When a new MFA code is detected, the MessageMonitor will call the provided
 // HandleMessageDetectionFunc with the detected MFA code.
-func New(log *zap.Logger) (*MessageMonitor, error) {
+func New() (*MessageMonitor, error) {
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -49,7 +48,6 @@ func New(log *zap.Logger) (*MessageMonitor, error) {
 
 	return &MessageMonitor{
 		db:                          db,
-		log:                         log,
 		latestKnownRecordTimestamp:  0,
 		registeredDetectionHandlers: make([]DetectionHandlerFunc, 0),
 	}, nil
@@ -75,7 +73,7 @@ func (m *MessageMonitor) ListenAndHandle() {
 		}
 
 		if err != nil {
-			m.log.Error("failed to query database", zap.Error(err))
+			log.Printf("failed to query database: %v", err)
 			time.Sleep(5 * time.Second)
 
 			continue
@@ -87,7 +85,7 @@ func (m *MessageMonitor) ListenAndHandle() {
 			scannedRow := &ScannedRow{}
 
 			if err := rows.Scan(&scannedRow.GUID, &scannedRow.AttributedBody, &scannedRow.Date); err != nil {
-				m.log.Error("failed to scan row", zap.Error(err))
+				log.Printf("failed to scan row: %v", err)
 				time.Sleep(5 * time.Second)
 				continue
 			}
@@ -98,22 +96,22 @@ func (m *MessageMonitor) ListenAndHandle() {
 		for _, row := range scannedRows {
 			message, err := streamtyped.ExtractMessageFromStreamTypedBuffer(row.AttributedBody)
 			if err != nil {
-				m.log.Error("failed to extract message from streamtyped buffer", zap.Error(err))
+				log.Printf("failed to extract message from streamtyped buffer: %v", err)
 				continue
 			}
 
-			m.log.Info("discovered mfa code", zap.String("message", *message))
+			log.Printf("discovered mfa code: %s", *message)
 
 			mfaCode, err := codeextractor.ExtractMFACodeFromMessage(*message)
 			if err != nil {
 				m.latestKnownRecordTimestamp = row.Date
-				m.log.Warn("failed to extract mfa code from message", zap.Error(err), zap.String("message", *message))
+				log.Printf("failed to extract mfa code from message: %v message:%s", err, *message)
 
 				continue
 			}
 			if mfaCode == "" {
 				m.latestKnownRecordTimestamp = row.Date
-				m.log.Info("no mfa code found in message", zap.String("message", *message))
+				log.Printf("no mfa code found in message: %s", *message)
 
 				continue
 			}

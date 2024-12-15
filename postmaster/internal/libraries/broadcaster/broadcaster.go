@@ -3,13 +3,13 @@ package broadcaster
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 )
 
 type PayloadCode string
@@ -19,7 +19,6 @@ const (
 )
 
 type Broadcaster struct {
-	log             *zap.Logger
 	mutex           sync.Mutex
 	openConnections map[string]*websocket.Conn
 	running         bool
@@ -40,9 +39,8 @@ type WebsocketMessagePayloadMFACode struct {
 
 // New creates a new Broadcaster instance. The Broadcaster is responsible for managing
 // websocket connections and broadcasting messages to connected clients.
-func New(log *zap.Logger) *Broadcaster {
+func New() *Broadcaster {
 	return &Broadcaster{
-		log:             log,
 		mutex:           sync.Mutex{},
 		openConnections: make(map[string]*websocket.Conn),
 		running:         false,
@@ -61,7 +59,7 @@ func (b *Broadcaster) BroadcastMFACode(code string) {
 
 	buf, err := json.Marshal(message)
 	if err != nil {
-		b.log.Error("broadcaster: failed to marshal message", zap.Error(err))
+		log.Printf("broadcaster: failed to marshal message: %v", err)
 		return
 	}
 
@@ -73,14 +71,10 @@ func (b *Broadcaster) BroadcastMFACode(code string) {
 			continue
 		}
 
-		b.log.With(
-			zap.Int("code_length", len(code)),
-			zap.String("code", code),
-			zap.String("connection_identifier", connIdent),
-		).Info("broadcaster: broadcasting mfa code to client")
+		log.Printf("broadcaster: failed to marshal message: %v code_length:%d code:%s connection_identifier:%s", err, len(code), code, connIdent)
 
 		if err := conn.WriteMessage(websocket.TextMessage, []byte(buf)); err != nil {
-			b.log.Error("broadcaster: failed to write message", zap.Error(err))
+			log.Printf("broadcaster: failed to write message: %v", err)
 		}
 	}
 }
@@ -102,7 +96,7 @@ func (b *Broadcaster) ListenAndBroadcast() {
 
 		connectionIdentifier := uuid.New().String()
 
-		b.log.Info("broadcaster: new connection", zap.String("connection_identifier", connectionIdentifier))
+		log.Printf("broadcaster: new connection connection_identifier:%s", connectionIdentifier)
 
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
@@ -117,16 +111,10 @@ func (b *Broadcaster) ListenAndBroadcast() {
 				continue
 			}
 
-			b.log.With(
-				zap.String("connection_identifier", connectionIdentifier),
-				zap.Error(err),
-			).Info("broadcaster: closing connection")
+			log.Printf("broadcaster: closing connection: %v connection_identifier:%s", err, connectionIdentifier)
 
 			if err := conn.Close(); err != nil {
-				b.log.With(
-					zap.String("connection_identifier", connectionIdentifier),
-					zap.Error(err),
-				).Error("broadcaster: failed to close connection")
+				log.Printf("broadcaster: failed to close connection: %v connection_identifier:%s", err, connectionIdentifier)
 			}
 
 			b.mutex.Lock()

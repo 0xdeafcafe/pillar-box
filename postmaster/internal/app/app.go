@@ -6,7 +6,6 @@ import (
 	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/broadcaster"
 	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/macos"
 	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/messagemonitor"
-	"go.uber.org/zap"
 )
 
 type App struct {
@@ -15,13 +14,13 @@ type App struct {
 	MacOS       *macos.MacOS
 }
 
-func New(log *zap.Logger, debug bool) *App {
-	monitor, err := messagemonitor.New(log)
+func New(debug bool) *App {
+	monitor, err := messagemonitor.New()
 	if err != nil {
 		panic(errors.Join(errors.New("failed to create monitor"), err))
 	}
 
-	broadcaster := broadcaster.New(log)
+	broadcaster := broadcaster.New()
 	macos := macos.New(monitor, debug)
 
 	return &App{
@@ -35,6 +34,7 @@ func (a *App) Run() {
 	// setup detection handlers
 	a.Monitor.RegisterDetectionHandler(a.Broadcaster.BroadcastMFACode)
 	a.Monitor.RegisterDetectionHandler(a.MacOS.HandleMFACode)
+	a.Monitor.RegisterNoAccessHandler(a.MacOS.HandleNoAccess)
 
 	// Run server and monitor in go routines
 	go a.Broadcaster.ListenAndBroadcast()
