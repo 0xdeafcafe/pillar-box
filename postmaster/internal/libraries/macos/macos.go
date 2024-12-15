@@ -2,6 +2,8 @@ package macos
 
 import (
 	"fmt"
+	"log"
+	"os/exec"
 	"time"
 
 	"github.com/caseymrm/menuet"
@@ -10,8 +12,15 @@ import (
 	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/messagemonitor"
 )
 
+type UndefinedBool int
+
 const (
-	prefCopyCodes = "com.0xdeafcafe.pillar-box-postmaster_also-copy-codes-to-clipboard"
+	prefShowNotification    = "com.0xdeafcafe.pillar-box-postmaster_show-notification"
+	prefCopyCodeToClipboard = "com.0xdeafcafe.pillar-box-postmaster_copy-code-to-clipboard"
+
+	UndefinedBoolUndefined UndefinedBool = iota
+	UndefinedBoolTrue
+	UndefinedBoolFalse
 )
 
 type MacOS struct {
@@ -23,6 +32,7 @@ type MacOS struct {
 }
 
 type MacOSPreferences struct {
+	ShowNotification    bool
 	CopyCodeToClipboard bool
 }
 
@@ -36,6 +46,11 @@ type MacOSLatestCode struct {
 // responsible for handling MFA codes detected by the MessageMonitor, displaying them
 // in the menu, and copying them to the clipboard.
 func New(monitor *messagemonitor.MessageMonitor, debug bool) *MacOS {
+	err := clipboard.Init()
+	if err != nil {
+		log.Printf("failed to initialize clipboard: %v", err)
+	}
+
 	return &MacOS{
 		debug:   debug,
 		monitor: monitor,
@@ -48,6 +63,21 @@ func (m *MacOS) HandleMFACode(mfaCode string) {
 	m.LatestCode = &MacOSLatestCode{
 		DetectedAt: time.Now(),
 		MFACode:    mfaCode,
+	}
+
+	if m.Preferences.CopyCodeToClipboard {
+		clipboard.Write(clipboard.FmtText, []byte(mfaCode))
+	}
+
+	if m.Preferences.ShowNotification {
+		menuet.App().Notification(menuet.Notification{
+			Title:                        "New SMS code detected",
+			Subtitle:                     fmt.Sprintf("Code: %s", mfaCode),
+			Message:                      "Click to copy to clipboard",
+			RemoveFromNotificationCenter: true,
+			ActionButton:                 "Copy",
+			CloseButton:                  "Dismiss",
+		})
 	}
 
 	m.renderMenu()
@@ -75,7 +105,8 @@ func (m *MacOS) HandleNoAccess() {
 func (m *MacOS) Run() {
 	m.renderMenu()
 
-	m.Preferences.CopyCodeToClipboard = menuet.Defaults().Boolean(prefCopyCodes)
+	m.Preferences.CopyCodeToClipboard = readAndSanitiseBoolPref(prefCopyCodeToClipboard)
+	m.Preferences.ShowNotification = readAndSanitiseBoolPref(prefShowNotification)
 
 	menuet.App().RunApplication()
 }
@@ -92,13 +123,19 @@ func (m *MacOS) renderMenu() {
 func (m *MacOS) createMenuItems() []menuet.MenuItem {
 	items := []menuet.MenuItem{
 		m.createLatestDiscoveredMenuItem(),
-		m.createCopyLastCodeMenuItem(),
-		m.createCopyCodesToClipboardMenuItem(),
 	}
 
 	if m.debug {
 		items = append(items, m.createDebugFakeMessageInitiatorMenuItem())
 	}
+
+	items = append(items,
+		menuet.MenuItem{Type: menuet.Separator},
+		m.createCopyLastCodeMenuItem(),
+		menuet.MenuItem{Type: menuet.Separator},
+		m.createCopyCodesToClipboardMenuItem(),
+		m.createShowNotificationMenuItem(),
+	)
 
 	return items
 }
@@ -106,7 +143,7 @@ func (m *MacOS) createMenuItems() []menuet.MenuItem {
 func (m *MacOS) createLatestDiscoveredMenuItem() menuet.MenuItem {
 	if m.LatestCode == nil {
 		return menuet.MenuItem{
-			Text: "Waiting for codes...",
+			Text: "Listening for codes...",
 		}
 	}
 
@@ -138,13 +175,26 @@ func (m *MacOS) createCopyLastCodeMenuItem() menuet.MenuItem {
 
 func (m *MacOS) createCopyCodesToClipboardMenuItem() menuet.MenuItem {
 	return menuet.MenuItem{
-		Text:  "Also copy codes to clipboard",
+		Text:  "Copy code to clipboard",
 		State: m.Preferences.CopyCodeToClipboard,
 		Clicked: func() {
 			newState := !m.Preferences.CopyCodeToClipboard
 
 			m.Preferences.CopyCodeToClipboard = newState
-			menuet.Defaults().SetBoolean(prefCopyCodes, newState)
+			menuet.Defaults().SetBoolean(prefCopyCodeToClipboard, newState)
+		},
+	}
+}
+
+func (m *MacOS) createShowNotificationMenuItem() menuet.MenuItem {
+	return menuet.MenuItem{
+		Text:  "Show notification",
+		State: m.Preferences.ShowNotification,
+		Clicked: func() {
+			newState := !m.Preferences.ShowNotification
+
+			m.Preferences.ShowNotification = newState
+			menuet.Defaults().SetBoolean(prefShowNotification, newState)
 		},
 	}
 }
@@ -153,10 +203,20 @@ func (m *MacOS) createDebugFakeMessageInitiatorMenuItem() menuet.MenuItem {
 	return menuet.MenuItem{
 		Text: "[debug] Dispatch random mock 2FA code (5 second fuse)",
 		Clicked: func() {
-			newState := !m.Preferences.CopyCodeToClipboard
-
-			m.Preferences.CopyCodeToClipboard = newState
-			menuet.Defaults().SetBoolean(prefCopyCodes, newState)
+			m.monitor.SendMockMessage()
 		},
 	}
+}
+
+func readAndSanitiseBoolPref(pref string) bool {
+	prefValue := UndefinedBool(menuet.Defaults().Integer(pref))
+
+	if prefValue < UndefinedBoolUndefined || prefValue > UndefinedBoolFalse {
+		return true
+	}
+	if prefValue == UndefinedBoolTrue {
+		return true
+	}
+
+	return false
 }
