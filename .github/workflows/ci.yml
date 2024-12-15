@@ -22,12 +22,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.23'
+          cache-dependency-path: postmaster/go.mod
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '23'
           cache: 'yarn'
+          cache-dependency-path: extension/yarn.lock
 
       - name: Set up environment variables
         run: echo "CGO_ENABLED=1" >> $GITHUB_ENV
@@ -73,12 +75,14 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.23'
+          cache-dependency-path: postmaster/go.mod
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '23'
           cache: 'yarn'
+          cache-dependency-path: extension/yarn.lock
 
       - name: Set up environment variables
         run: echo "CGO_ENABLED=1" >> $GITHUB_ENV
