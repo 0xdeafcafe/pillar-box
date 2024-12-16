@@ -34,8 +34,8 @@ function stripDevIcons (apply: boolean) {
     },
     renderStart (outputOptions: any, inputOptions: any) {
       const outDir = outputOptions.dir
-      fs.rm(resolve(outDir, 'dev-icon-32.png'), () => console.log(`Deleted dev-icon-32.png frm prod build`))
-      fs.rm(resolve(outDir, 'dev-icon-128.png'), () => console.log(`Deleted dev-icon-128.png frm prod build`))
+      fs.rm(resolve(outDir, 'dev-icon-192.png'), () => console.log(`Deleted dev-icon-192.png frm prod build`))
+      fs.rm(resolve(outDir, 'dev-icon-512.png'), () => console.log(`Deleted dev-icon-512.png frm prod build`))
     }
   }
 }

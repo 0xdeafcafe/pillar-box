@@ -1,17 +1,35 @@
 {
-  "action": {
-    "default_icon": "public/dev-icon-32.png",
-    "default_popup": "src/pages/popup/index.html"
+  "manifest_version": 3,
+  "name": "Pillar Box",
+  "description": "A browser extension that auto-fills MFA codes sent via SMS.",
+  "background": {
+    "service_worker": "src/service-worker/index.ts",
+    "type": "module"
   },
   "icons": {
-    "128": "public/dev-icon-128.png"
+    "193": "dev-icon-192.png",
+    "512": "dev-icon-512.png"
   },
+  "permissions": [
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*",
+        "<all_urls>"
+      ],
+      "js": [
+        "src/pages/content/index.tsx"
+      ]
+    }
+  ],
   "web_accessible_resources": [
     {
       "resources": [
-        "contentStyle.css",
-        "dev-icon-128.png",
-        "dev-icon-32.png"
+        "dev-icon-192.png",
+        "dev-icon-512.png"
       ],
       "matches": []
     }

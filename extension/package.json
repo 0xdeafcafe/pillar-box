@@ -1,11 +1,11 @@
 {
-  "name": "vite-web-extension",
-  "version": "1.2.0",
-  "description": "A simple chrome extension template with Vite, React, TypeScript and Tailwind CSS.",
+  "name": "pillar-box-extension",
+  "version": "1.0.0",
+  "description": "A browser extension that auto-fills MFA codes sent via SMS.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JohnBra/web-extension.git"
+    "url": "https://github.com/0xdeafcafe/pillar-box.git"
   },
   "scripts": {
     "build": "vite build",

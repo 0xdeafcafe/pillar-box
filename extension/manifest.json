@@ -7,7 +7,8 @@
     "type": "module"
   },
   "icons": {
-    "128": "icon-128.png"
+    "193": "icon-192.png",
+    "512": "icon-512.png"
   },
   "permissions": [
     "activeTab"
@@ -27,8 +28,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "icon-128.png",
-        "icon-32.png"
+        "icon-192.png",
+        "icon-512.png"
       ],
       "matches": []
     }
