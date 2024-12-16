@@ -85,6 +85,12 @@ jobs:
           cache: 'yarn'
           cache-dependency-path: extension/yarn.lock
 
+      - name: Set up Apple Code Signing Certificates
+        uses: apple-actions/import-codesign-certs@v3
+        with: 
+          p12-file-base64: ${{ secrets.CODESIGN_CERTIFICATE_P12 }}
+          p12-password: ${{ secrets.CODESIGN_CERTIFICATE_P12_PASSWORD }}
+
       - name: Set up environment variables
         run: echo "CGO_ENABLED=1" >> $GITHUB_ENV
 
