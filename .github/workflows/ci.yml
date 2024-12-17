@@ -113,8 +113,17 @@ jobs:
         run: yarn install
         working-directory: extension
 
+      - name: Set Prerelease Status
+        id: prerelease_status
+        run: |
+          if [[ "${{ github.ref }}" == *-prerelease.* || "${{ github.ref }}" == *-beta.* || "${{ github.ref }}" == *-alpha.* ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build macOS application (pre-release)
-        if: contains(github.ref, '-prerelease.') || contains(github.ref, '-beta.') || contains(github.ref, '-alpha.')
+        if: steps.prerelease_status.outputs.prerelease == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -123,9 +132,8 @@ jobs:
         run: make ship-ci-beta
         working-directory: postmaster
 
-
       - name: Build macOS application
-        if: (!contains(github.ref, '-prerelease.') && !contains(github.ref, '-beta.') && !contains(github.ref, '-alpha.'))
+        if: steps.prerelease_status.outputs.prerelease == 'false'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -146,9 +154,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: Pillar Box ${{ github.ref }}
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.prerelease_status.outputs.prerelease == 'true' }}
 
       - name: Upload Pillar Box.app
         uses: actions/upload-release-asset@v1
@@ -156,8 +164,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: postmaster/bin/Pillar\ Box.zip
-          asset_name: PillarBox.zip
+          asset_path: postmaster/bin
+          asset_name: "Pillar Box.zip"
           asset_content_type: application/zip
 
       - name: Upload extension
