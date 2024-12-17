@@ -16,7 +16,7 @@ Install both the macOS app and the Chromium extension to get started easily auto
 - No need to copy and paste codes from messages, or switch between apps
 - Secure, nothing leaves your machine
 
-## Installation
+## Getting started
 
 The easiest way to get started is to download the latest release from the [releases page](releases). Download both files:
 
@@ -28,6 +28,17 @@ Extract the app from the archive and run it, you may need to go to System Settin
 Extract the extension from the archive and navigate to `chrome://extensions/` in your browser. Enable "Developer mode" in the top right corner, click "Load unpacked" and select the extension you just extracted.
 
 That should be it, go to a website that requires an SMS code and you should see the code automatically filled in.
+
+## Source structure
+
+```
+.
+├── assets         # Assets for the repo, app icons, chrome store images, etc.
+├── postmaster     # Native macOS application
+├── extension      # Chromium extension
+├── example-server # Example server to test the extension
+└── README.md      # 📍 You are here
+```
 
 ## Building from source
 
@@ -47,14 +58,3 @@ $ go build cmd/main.go       # Build the app
 1. Open `chrome://extensions/` in your browser (tested with Chrome and Arc)
 2. Enable "Developer mode" in the top right corner
 3. Click "Load unpacked" and select the `extension` directory
-
-## Source structure
-
-```
-.
-├── assets         # Assets for the repo, app icons, chrome store images, etc.
-├── postmaster     # Native macOS application
-├── extension      # Chromium extension
-├── example-server # Example server to test the extension
-└── README.md      # 📍 You are here
-```
