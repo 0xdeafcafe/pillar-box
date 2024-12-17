@@ -1,0 +1,12 @@
+{
+  "name": "example-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.4"
+  },
+  "scripts": {
+    "start": "serve"
+  }
+}
