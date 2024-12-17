@@ -1,4 +1,4 @@
-package macos
+package os
 
 import (
 	"fmt"
@@ -43,7 +43,7 @@ type MacOSLatestCode struct {
 // macOS menu bar application and rendering the menu items. The MacOS instance is also
 // responsible for handling MFA codes detected by the MessageMonitor, displaying them
 // in the menu, and copying them to the clipboard.
-func New(monitor *messagemonitor.MessageMonitor, debug bool) *MacOS {
+func NewMacOS(monitor *messagemonitor.MessageMonitor, debug bool) *MacOS {
 	err := clipboard.Init()
 	if err != nil {
 		log.Printf("failed to initialize clipboard: %v", err)
