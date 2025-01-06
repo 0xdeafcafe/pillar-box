@@ -10,6 +10,7 @@ import (
 type OS interface {
 	HandleMFACode(mfaCode string)
 	HandleNoAccess()
+	HandleNewVersionAvailable(name, version, url string)
 	Run()
 }
 

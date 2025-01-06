@@ -83,7 +83,6 @@ func (m *MacOS) HandleNoAccess() {
 		InformativeText: "To enable Full Disk Access: System Settings > Security & Privacy > Full Disk Access > Add Pillar Box",
 		Buttons:         []string{"OK", "Cancel"},
 	})
-	log.Printf("response.Button: %d", response.Button)
 
 	if response.Button == 0 {
 		cmd := exec.Command("open", "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
@@ -92,6 +91,23 @@ func (m *MacOS) HandleNoAccess() {
 
 		if err := cmd.Run(); err != nil {
 			log.Printf("failed to open system preferences: %v", err)
+		}
+	}
+}
+
+func (m *MacOS) HandleNewVersionAvailable(name, version, url string) {
+	response := menuet.App().Alert(menuet.Alert{
+		MessageText:     "Update Available",
+		InformativeText: "A new version of Pillar Box is available. Would you like to download it?",
+		Buttons:         []string{"Download", "Later"},
+	})
+	if response.Button == 0 {
+		cmd := exec.Command("open", url)
+
+		log.Printf("opening browser: %v", cmd)
+
+		if err := cmd.Run(); err != nil {
+			log.Printf("failed to open browser: %v", err)
 		}
 	}
 }
