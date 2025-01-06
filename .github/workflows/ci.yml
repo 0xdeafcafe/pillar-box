@@ -18,6 +18,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set truncated git hash
+        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c 1-7)" >> $GITHUB_ENV
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -54,6 +57,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_CODESIGN_IDENTITY: ${{ secrets.APPLE_CODESIGN_IDENTITY }}
+          PB_VERSION: 0.0.0-${{ env.SHORT_SHA }}
         run: make ship-ci
         working-directory: postmaster
 
@@ -69,19 +73,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Prerelease tag
-        id: check_tag_beta
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          if [[ "$TAG" == *beta* ]]; then
-            echo "Tag contains 'beta'."
-            echo "::set-output name=contains_beta::true"
-          else
-            echo "Tag does not contain 'beta'."
-            echo "::set-output name=contains_beta::false"
-          fi
-        shell: bash
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -116,7 +107,7 @@ jobs:
       - name: Set Prerelease Status
         id: prerelease_status
         run: |
-          if [[ "${{ github.ref }}" == *-prerelease.* || "${{ github.ref }}" == *-beta.* || "${{ github.ref }}" == *-alpha.* ]]; then
+          if [[ "${{ github.ref }}" == *-*.* ]]; then
             echo "prerelease=true" >> $GITHUB_OUTPUT
           else
             echo "prerelease=false" >> $GITHUB_OUTPUT
@@ -129,6 +120,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_CODESIGN_IDENTITY: ${{ secrets.APPLE_CODESIGN_IDENTITY }}
+          PB_VERSION: ${{ github.ref }}
         run: make ship-ci-beta
         working-directory: postmaster
 
@@ -139,6 +131,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_CODESIGN_IDENTITY: ${{ secrets.APPLE_CODESIGN_IDENTITY }}
+          PB_VERSION: ${{ github.ref }}
         run: make ship-ci
         working-directory: postmaster
 

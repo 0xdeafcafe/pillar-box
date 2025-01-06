@@ -24,7 +24,7 @@ ship-beta:
 .PHONY ship-ci:
 ship-ci:
 	@echo "Shipping..."
-	@make build
+	@make build-ci
 	@make bundle
 	@make codesign
 	@make notarize-ci
@@ -33,7 +33,7 @@ ship-ci:
 .PHONY ship-ci-beta:
 ship-ci-beta:
 	@echo "Shipping..."
-	@make build
+	@make build-ci
 	@make bundle-beta
 	@make codesign
 	@make notarize-ci
@@ -42,9 +42,17 @@ ship-ci-beta:
 .PHONY build:
 build:
 	@echo "Building..."
-	@mkdir -p Building
+	@mkdir -p bin
 	@CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o bin/pillarbox-amd64-darwin ./cmd/main.go
 	@CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o bin/pillarbox-arm64-darwin ./cmd/main.go
+	@lipo bin/pillarbox-amd64-darwin bin/pillarbox-arm64-darwin -create -output "bin/pillarbox"
+
+.PHONY build-ci:
+build-ci:
+	@echo "Building..."
+	@mkdir -p bin
+	@CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -v -ldflags="-X github.com/0xdeafcafe/pillar-box/server/internal/updater/updater.Version=$PB_VERSION" -o bin/pillarbox-amd64-darwin ./cmd/main.go
+	@CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -v -ldflags="-X github.com/0xdeafcafe/pillar-box/server/internal/updater/updater.Version=$PB_VERSION" -o bin/pillarbox-arm64-darwin ./cmd/main.go
 	@lipo bin/pillarbox-amd64-darwin bin/pillarbox-arm64-darwin -create -output "bin/pillarbox"
 
 .PHONY bundle:
