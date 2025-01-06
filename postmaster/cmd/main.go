@@ -8,7 +8,6 @@ import (
 
 func main() {
 	var debug bool
-
 	if len(os.Args) > 1 {
 		debug = os.Args[1] == "--debug"
 	}
