@@ -13,7 +13,12 @@ import (
 	"github.com/0xdeafcafe/pillar-box/server/internal/utilities/ptr"
 )
 
-const Version string = "0.0.0-local"
+const (
+	Version = "0.0.0-local"
+
+	githubOwner = "0xdeafcafe"
+	githubRepo  = "pillar-box"
+)
 
 type GetPrereleasePreferenceFunc func() bool
 type NewVersionAvailableFunc func(name, version, url string)
@@ -108,12 +113,8 @@ func (u *Updater) StartBackgroundChecker() {
 }
 
 func (u *Updater) getGitHubRelease(prerelease bool) (*github.RepositoryRelease, error) {
-	ctx := context.Background()
-	owner := "0xdeafcafe"
-	repo := "pillar-box"
-
 	if prerelease {
-		releases, _, err := u.githubClient.Repositories.ListReleases(ctx, owner, repo, nil)
+		releases, _, err := u.githubClient.Repositories.ListReleases(context.Background(), githubOwner, githubRepo, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +126,7 @@ func (u *Updater) getGitHubRelease(prerelease bool) (*github.RepositoryRelease, 
 	}
 
 	// Fetch latest release if not pre-release
-	release, _, err := u.githubClient.Repositories.GetLatestRelease(ctx, owner, repo)
+	release, _, err := u.githubClient.Repositories.GetLatestRelease(context.Background(), githubOwner, githubRepo)
 	if err != nil {
 		return nil, err
 	}
