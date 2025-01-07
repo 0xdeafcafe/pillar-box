@@ -116,24 +116,22 @@ func (m *MessageMonitor) ListenAndHandle() {
 				continue
 			}
 
-			log.Printf("discovered mfa code: %s", *message)
-
-			mfaCode, err := codeextractor.ExtractMFACodeFromMessage(*message)
+			codes, err := codeextractor.ExtractCodes(*message)
 			if err != nil {
 				m.latestKnownRecordTimestamp = row.Date
-				log.Printf("failed to extract mfa code from message: %v message:%s", err, *message)
+				if err == codeextractor.ErrNoCodesFound {
+					log.Printf("no codes found in message: %v", err)
+				} else {
+					log.Printf("failed to extract mfa code from message: %v message: %s", err, *message)
+				}
 
 				continue
 			}
-			if mfaCode == "" {
-				m.latestKnownRecordTimestamp = row.Date
-				log.Printf("no mfa code found in message: %s", *message)
 
-				continue
-			}
+			log.Printf("discovered mfa codes: %v", codes)
 
 			m.latestKnownRecordTimestamp = row.Date
-			m.dispatchMFACode(mfaCode)
+			m.dispatchMFACode(codes[0])
 		}
 
 		time.Sleep(1 * time.Second)
