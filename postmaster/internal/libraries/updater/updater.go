@@ -42,6 +42,14 @@ func (u *Updater) StartBackgroundChecker() {
 		for {
 			release, _, err := u.githubClient.Repositories.GetLatestRelease(context.Background(), "0xdeafcafe", "pillar-box")
 			if err != nil {
+				if errGithub, ok := err.(*github.ErrorResponse); ok {
+					if errGithub.Response.StatusCode == 404 {
+						log.Println("latest release or repository not found, sleeping for 1 hour")
+						time.Sleep(time.Hour)
+						continue
+					}
+				}
+
 				log.Printf("failed to get latest release: %v, sleeping for 1 hour", err)
 				time.Sleep(time.Hour)
 				continue
