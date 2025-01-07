@@ -60,9 +60,25 @@ func ExtractMessageFromStreamTypedBuffer(buffer []byte) (*string, error) {
 		return nil, errors.Join(ErrInvalidStreamTypedBuffer, ErrStreamTypedNoMessageTrailer)
 	}
 
-	if !utf8.Valid(removeMessagePrefix[:messageEnd]) {
-		return nil, errors.Join(ErrInvalidStreamTypedBuffer, ErrStreamTypedMessageInvalid)
+	messageWithPossibleNoise := removeMessagePrefix[:messageEnd]
+	message := lazyRemoveNonUTF8(messageWithPossibleNoise)
+
+	return ptr.Ptr(string(message)), nil
+}
+
+// lazyRemoveNonUTF8 removes non-utf8 characters from a buffer. I can't be fucked to figure
+// out how this NSArchived data structure works on all macOS versions, so this will do.
+func lazyRemoveNonUTF8(buffer []byte) []byte {
+	if utf8.Valid(buffer) {
+		return buffer
 	}
 
-	return ptr.Ptr(string(removeMessagePrefix[:messageEnd])), nil
+	var utf8Buffer []byte
+	for _, r := range string(buffer) {
+		if r < utf8.RuneSelf {
+			utf8Buffer = append(utf8Buffer, byte(r))
+		}
+	}
+
+	return utf8Buffer
 }
