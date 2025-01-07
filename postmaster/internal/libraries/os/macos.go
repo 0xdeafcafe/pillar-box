@@ -10,12 +10,14 @@ import (
 	"golang.design/x/clipboard"
 
 	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/messagemonitor"
+	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/updater"
 )
 
 type UndefinedBool int
 
 const (
-	prefCopyCodeToClipboard = "com.0xdeafcafe.pillar-box-postmaster_copy-code-to-clipboard"
+	prefCopyCodeToClipboard  = "com.0xdeafcafe.pillar-box-postmaster_copy-code-to-clipboard"
+	prefGetPrereleaseUpdates = "com.0xdeafcafe.pillar-box-postmaster_get-prerelease-updates"
 
 	UndefinedBoolUndefined UndefinedBool = iota
 	UndefinedBoolTrue
@@ -26,12 +28,15 @@ type MacOS struct {
 	debug   bool
 	monitor *messagemonitor.MessageMonitor
 
-	LatestCode  *MacOSLatestCode
-	Preferences *MacOSPreferences
+	updater *updater.Updater
+
+	latestCode  *MacOSLatestCode
+	preferences *MacOSPreferences
 }
 
 type MacOSPreferences struct {
-	CopyCodeToClipboard bool
+	CopyCodeToClipboard  bool
+	GetPrereleaseUpdates bool
 }
 
 type MacOSLatestCode struct {
@@ -49,21 +54,31 @@ func NewMacOS(monitor *messagemonitor.MessageMonitor, debug bool) *MacOS {
 		log.Printf("failed to initialize clipboard: %v", err)
 	}
 
-	return &MacOS{
+	macos := &MacOS{
 		debug:   debug,
 		monitor: monitor,
 
-		Preferences: &MacOSPreferences{},
+		updater: updater.New(),
+
+		preferences: &MacOSPreferences{},
 	}
+
+	updater := updater.New()
+	updater.RegisterNewVersionAvailableHandler(macos.HandleNewVersionAvailable)
+	updater.RegisterGetPrereleasePreferenceHandler(func() bool {
+		return macos.preferences.GetPrereleaseUpdates
+	})
+
+	return macos
 }
 
 func (m *MacOS) HandleMFACode(mfaCode string) {
-	m.LatestCode = &MacOSLatestCode{
+	m.latestCode = &MacOSLatestCode{
 		DetectedAt: time.Now(),
 		MFACode:    mfaCode,
 	}
 
-	if m.Preferences.CopyCodeToClipboard {
+	if m.preferences.CopyCodeToClipboard {
 		clipboard.Write(clipboard.FmtText, []byte(mfaCode))
 
 		menuet.App().Notification(menuet.Notification{
@@ -113,9 +128,11 @@ func (m *MacOS) HandleNewVersionAvailable(name, version, url string) {
 }
 
 func (m *MacOS) Run() {
+	m.updater.StartBackgroundChecker()
+
 	m.renderMenu()
 
-	m.Preferences.CopyCodeToClipboard = readAndSanitiseBoolPref(prefCopyCodeToClipboard)
+	m.preferences.CopyCodeToClipboard = readAndSanitiseBoolPref(prefCopyCodeToClipboard)
 
 	menuet.App().RunApplication()
 }
@@ -139,29 +156,29 @@ func (m *MacOS) createMenuItems() []menuet.MenuItem {
 	}
 
 	items = append(items,
-		menuet.MenuItem{Type: menuet.Separator},
 		m.createCopyLastCodeMenuItem(),
 		menuet.MenuItem{Type: menuet.Separator},
 		m.createCopyCodesToClipboardMenuItem(),
+		m.cretePrereleaseUpdatesMenuItem(),
 	)
 
 	return items
 }
 
 func (m *MacOS) createLatestDiscoveredMenuItem() menuet.MenuItem {
-	if m.LatestCode == nil {
+	if m.latestCode == nil {
 		return menuet.MenuItem{
 			Text: "Listening for codes...",
 		}
 	}
 
 	return menuet.MenuItem{
-		Text: fmt.Sprintf("Latest discovered code: %s", m.LatestCode.MFACode),
+		Text: fmt.Sprintf("Latest discovered code: %s", m.latestCode.MFACode),
 	}
 }
 
 func (m *MacOS) createCopyLastCodeMenuItem() menuet.MenuItem {
-	if m.LatestCode == nil {
+	if m.latestCode == nil {
 		return menuet.MenuItem{
 			Text: "No code to copy",
 		}
@@ -176,20 +193,37 @@ func (m *MacOS) createCopyLastCodeMenuItem() menuet.MenuItem {
 				return
 			}
 
-			clipboard.Write(clipboard.FmtText, []byte(m.LatestCode.MFACode))
+			clipboard.Write(clipboard.FmtText, []byte(m.latestCode.MFACode))
 		},
 	}
 }
 
 func (m *MacOS) createCopyCodesToClipboardMenuItem() menuet.MenuItem {
 	return menuet.MenuItem{
-		Text:  "Copy code to clipboard",
-		State: m.Preferences.CopyCodeToClipboard,
+		Text:  "Automatically copy to clipboard",
+		State: m.preferences.CopyCodeToClipboard,
 		Clicked: func() {
-			newState := !m.Preferences.CopyCodeToClipboard
+			newState := !m.preferences.CopyCodeToClipboard
 
-			m.Preferences.CopyCodeToClipboard = newState
+			m.preferences.CopyCodeToClipboard = newState
 			menuet.Defaults().SetBoolean(prefCopyCodeToClipboard, newState)
+		},
+	}
+}
+
+func (m *MacOS) cretePrereleaseUpdatesMenuItem() menuet.MenuItem {
+	return menuet.MenuItem{
+		Text:  "Get pre-release updates",
+		State: m.preferences.GetPrereleaseUpdates,
+		Clicked: func() {
+			newState := !m.preferences.GetPrereleaseUpdates
+
+			m.preferences.GetPrereleaseUpdates = newState
+			menuet.Defaults().SetBoolean(prefGetPrereleaseUpdates, newState)
+
+			if err := m.updater.CheckForUpdates(); err != nil {
+				log.Printf("failed to check for updates: %v", err)
+			}
 		},
 	}
 }

@@ -2,6 +2,8 @@ package updater
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -13,12 +15,14 @@ import (
 
 const Version string = "0.0.0-local"
 
+type GetPrereleasePreferenceFunc func() bool
 type NewVersionAvailableFunc func(name, version, url string)
 
 type Updater struct {
 	githubClient *github.Client
 
-	registeredNewVersionAvailableHandler NewVersionAvailableFunc
+	registeredGetPrereleasePreferenceHandler GetPrereleasePreferenceFunc
+	registeredNewVersionAvailableHandler     NewVersionAvailableFunc
 }
 
 func New() *Updater {
@@ -27,65 +31,104 @@ func New() *Updater {
 	}
 }
 
+func (u *Updater) RegisterGetPrereleasePreferenceHandler(handler GetPrereleasePreferenceFunc) {
+	u.registeredGetPrereleasePreferenceHandler = handler
+}
+
 func (u *Updater) RegisterNewVersionAvailableHandler(handler NewVersionAvailableFunc) {
 	u.registeredNewVersionAvailableHandler = handler
 }
 
-func (u *Updater) StartBackgroundChecker() {
+func (u *Updater) CheckForUpdates() error {
 	semverVersion, err := semver.NewVersion(Version)
 	if err != nil {
-		log.Printf("failed to parse version: %v", err)
-		return
+		return fmt.Errorf("failed to parse version: %w", err)
 	}
 
+	prerelease := false
+	if u.registeredGetPrereleasePreferenceHandler != nil {
+		prerelease = u.registeredGetPrereleasePreferenceHandler()
+	}
+
+	release, err := u.getGitHubRelease(prerelease)
+	if err != nil {
+		if errGithub, ok := err.(*github.ErrorResponse); ok && errGithub.Response.StatusCode == 404 {
+			return errors.New("no release found")
+		}
+
+		return err
+	}
+	if release == nil {
+		return errors.New("no release available")
+	}
+	if release.TagName == nil {
+		return errors.New("release tag name is nil")
+	}
+
+	latestVersion, err := semver.NewVersion(*release.TagName)
+	if err != nil {
+		return err
+	}
+
+	if semverVersion.LessThan(latestVersion) {
+		log.Printf("new version available: %s", latestVersion.String())
+
+		if u.registeredNewVersionAvailableHandler != nil {
+			u.registeredNewVersionAvailableHandler(
+				ptr.ValueOrDefault(release.Name, "Release"),
+				latestVersion.String(),
+				ptr.ValueOrZero(release.HTMLURL),
+			)
+		}
+	}
+
+	return nil
+}
+
+func (u *Updater) StartBackgroundChecker() {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("recovered from panic: %v", r)
+			}
+		}()
+
 		for {
-			release, _, err := u.githubClient.Repositories.GetLatestRelease(context.Background(), "0xdeafcafe", "pillar-box")
-			if err != nil {
-				if errGithub, ok := err.(*github.ErrorResponse); ok {
-					if errGithub.Response.StatusCode == 404 {
-						log.Println("latest release or repository not found, sleeping for 1 hour")
-						time.Sleep(time.Hour)
-						continue
-					}
-				}
+			if err := u.CheckForUpdates(); err != nil {
+				log.Printf("failed or unable to check for updates, sleeping for an hour: %v", err)
+				time.Sleep(time.Hour)
 
-				log.Printf("failed to get latest release: %v, sleeping for 1 hour", err)
-				time.Sleep(time.Hour)
-				continue
-			}
-			if release == nil {
-				log.Println("no release found, sleeping for 1 hour")
-				time.Sleep(time.Hour)
-				continue
-			}
-			if release.TagName == nil {
-				log.Println("no tag name found, sleeping for 1 hour")
-				time.Sleep(time.Hour)
 				continue
 			}
 
-			latestVersion, err := semver.NewVersion(*release.TagName)
-			if err != nil {
-				log.Printf("failed to parse latest version: %v, sleeping for 1 hour", err)
-				time.Sleep(time.Hour)
-				continue
-			}
-
-			if semverVersion.LessThan(latestVersion) {
-				log.Printf("new version available: %s", latestVersion.String())
-
-				if u.registeredNewVersionAvailableHandler != nil {
-					u.registeredNewVersionAvailableHandler(
-						ptr.ValueOrDefault(release.Name, "Release"),
-						latestVersion.String(),
-						ptr.ValueOrZero(release.HTMLURL),
-					)
-				}
-			}
-
-			log.Println("sleeping for 24 hours")
+			log.Println("no update available, sleeping for 24 hours")
 			time.Sleep(24 * time.Hour)
 		}
 	}()
+}
+
+func (u *Updater) getGitHubRelease(prerelease bool) (*github.RepositoryRelease, error) {
+	ctx := context.Background()
+	owner := "0xdeafcafe"
+	repo := "pillar-box"
+
+	if prerelease {
+		releases, _, err := u.githubClient.Repositories.ListReleases(ctx, owner, repo, nil)
+		if err != nil {
+			return nil, err
+		}
+		if len(releases) == 0 {
+			return nil, nil
+		}
+
+		return releases[0], nil
+	}
+
+	// Fetch latest release if not pre-release
+	release, _, err := u.githubClient.Repositories.GetLatestRelease(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+
+	return release, nil
 }

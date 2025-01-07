@@ -6,14 +6,12 @@ import (
 	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/broadcaster"
 	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/messagemonitor"
 	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/os"
-	"github.com/0xdeafcafe/pillar-box/server/internal/libraries/updater"
 )
 
 type App struct {
 	Broadcaster *broadcaster.Broadcaster
 	Monitor     *messagemonitor.MessageMonitor
 	OS          os.OS
-	Updater     *updater.Updater
 }
 
 func New(debug bool) *App {
@@ -33,7 +31,6 @@ func New(debug bool) *App {
 		Broadcaster: broadcaster,
 		Monitor:     monitor,
 		OS:          os,
-		Updater:     updater.New(),
 	}
 }
 
@@ -43,13 +40,9 @@ func (a *App) Run() {
 	a.Monitor.RegisterDetectionHandler(a.OS.HandleMFACode)
 	a.Monitor.RegisterNoAccessHandler(a.OS.HandleNoAccess)
 
-	// Setup update handlers
-	a.Updater.RegisterNewVersionAvailableHandler(a.OS.HandleNewVersionAvailable)
-
 	// Run server and monitor in go routines
 	go a.Broadcaster.ListenAndBroadcast()
 	go a.Monitor.ListenAndHandle()
-	a.Updater.StartBackgroundChecker()
 
 	a.OS.Run()
 }
