@@ -1,3 +1,6 @@
+> [!IMPORTANT]  
+> This feature is now [built into macOS](https://www.macrumors.com/2025/06/12/ios-26-macos-tahoe-expand-one-time-code-autofill/) itself, from macOS Tahoe onwards.
+
 <h1 align="center">Pillar Box</h1>
 
 <p align="center">
